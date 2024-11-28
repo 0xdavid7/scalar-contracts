@@ -8,12 +8,12 @@ import { AxelarGateway } from "@axelar-network/axelar-cgp-solidity/contracts/Axe
 import { AxelarAuthWeighted } from "@axelar-network/axelar-cgp-solidity/contracts/auth/AxelarAuthWeighted.sol";
 import { TokenDeployer } from "@axelar-network/axelar-cgp-solidity/contracts/TokenDeployer.sol";
 import { Test } from "forge-std/src/Test.sol";
-import { sBTC } from "../src/tokens/sBTC.sol";
 import { Protocol } from "../src/Protocol.sol";
+import { ScalarToken } from "../src/ScalarToken.sol";
 import { console2 } from "forge-std/src/console2.sol";
 
 contract ProtocolTest is Test {
-    sBTC token;
+    ScalarToken token;
     Protocol protocol;
     address owner;
     address user;
@@ -23,7 +23,7 @@ contract ProtocolTest is Test {
     TokenDeployer tokenDeployer;
 
     function setUp() public {
-        token = new sBTC();
+        token = new ScalarToken("ScalarToken", "SCALAR");
         owner = token.owner();
         user = address(1);
 
