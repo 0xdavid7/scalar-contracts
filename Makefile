@@ -32,3 +32,7 @@ test-files:
 # Clean the build artifacts
 clean:
 	forge clean
+
+remapping:
+	rm -rf remappings.txt
+	echo "forge remappings > remappings.txt"

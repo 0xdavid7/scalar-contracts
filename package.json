@@ -7,9 +7,9 @@
     "url": "https://github.com/scalarorg"
   },
   "dependencies": {
-    "@axelar-network/axelar-cgp-solidity": "^6.3.1",
-    "@axelar-network/axelar-gmp-sdk-solidity": "^6.0.4",
-    "@openzeppelin/contracts": "^5.0.1"
+    "@axelar-network/axelar-cgp-solidity": "^6.4.0",
+    "@axelar-network/axelar-gmp-sdk-solidity": "^5.10.0",
+    "@openzeppelin/contracts": "^4.9.6"
   },
   "devDependencies": {
     "forge-std": "github:foundry-rs/forge-std#v1.8.1",
