@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.9;
 
 /// @title Predeploys
 /// @notice Contains constant addresses for contracts that are pre-deployed to the OP Stack L2 system.
