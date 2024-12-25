@@ -9,19 +9,19 @@ export function getTestSuite() {
 
   const publicClient = createPublicClient({
     chain: sepolia,
-    transport: http(process.env.ETHEREUM_RPC_URL),
+    transport: http(ProjectENV.SEPOLIA_RPC_URL),
   });
 
   const walletClient = createWalletClient({
     account,
     chain: sepolia,
-    transport: http(process.env.ETHEREUM_RPC_URL),
+    transport: http(ProjectENV.SEPOLIA_RPC_URL),
   });
 
   const testSuite = {
     publicClient,
     walletClient,
-    erc20CrossChainContractAddress: ProjectENV.ERC20_CROSS_CHAIN_ADDRESS,
+    contractAddress: ProjectENV.PROXIED_ERC20_CROSS_CHAIN_ADDRESS,
     gatewayContractAddress: ProjectENV.GATEWAY_ADDRESS,
     account,
   };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { parseUnits } from "viem";
 import { getTestSuite } from "./setup";
-import { erc20CrossChainABI } from "./abi";
+import { ERC20CrossChainABI } from "./abi";
 
 describe("TransferRemote", () => {
   const { publicClient, walletClient, account, erc20CrossChainContractAddress } = getTestSuite();
@@ -16,7 +16,7 @@ describe("TransferRemote", () => {
     // Simulate transaction to estimate gas
     const { request } = await publicClient.simulateContract({
       address: erc20CrossChainContractAddress as `0x${string}`,
-      abi: erc20CrossChainABI,
+      abi: ERC20CrossChainABI,
       functionName: "transferRemote",
       args: [destinationChain, destinationContractAddress, amount, encodedMetadata],
       account: account.address,
