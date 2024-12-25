@@ -22,6 +22,7 @@ export function getTestSuite() {
     publicClient,
     walletClient,
     protocolContractAddress: ProjectENV.PROTOCOL_ADDRESS,
+    gatewayContractAddress: ProjectENV.GATEWAY_ADDRESS,
     account,
   };
 

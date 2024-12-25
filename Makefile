@@ -19,7 +19,9 @@ info:
 	$(info PRIVATE_KEY: $(PRIVATE_KEY))
 	$(info ANVIL_RPC_URL: $(ANVIL_RPC_URL))
 	$(info SEPOLIA_RPC_URL: $(SEPOLIA_RPC_URL))
+	$(info BNB_RPC_URL: $(BNB_RPC_URL))
 	$(info API_KEY_ETHERSCAN: $(API_KEY_ETHERSCAN))
+	$(info API_KEY_BSCSCAN: $(API_KEY_BSCSCAN))
 	$(info TOKEN_NAME: $(TOKEN_NAME))
 	$(info TOKEN_SYMBOL: $(TOKEN_SYMBOL))
 	$(info REDEPLOY_AXELAR: $(REDEPLOY_AXELAR))
@@ -148,6 +150,28 @@ deploy-sepolia: deploy-axelar
 		--broadcast \
 		--verify \
 		--etherscan-api-key ${API_KEY_ETHERSCAN} \
+		-vvvv
+
+deploy-bnb:
+	@echo "Deploying Protocol to BNB Smart Chain..."
+	@forge script script/DeployAxelar.s.sol \
+		-vvvv \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		--rpc-url ${BNB_RPC_URL} \
+		--verify \
+		--verifier-url https://api-testnet.bscscan.com/api \
+		--etherscan-api-key ${API_KEY_BSCSCAN}
+
+	@forge script script/DeployProtocol.s.sol \
+		--sig "run(string,string,address,address)" \
+		$(TOKEN_NAME) $(TOKEN_SYMBOL) $(GATEWAY_ADDRESS) $(GAS_SERVICE_ADDRESS) \
+		--rpc-url ${BNB_RPC_URL} \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		--verify \
+		--verifier-url https://api-testnet.bscscan.com/api \
+		--etherscan-api-key ${API_KEY_BSCSCAN} \
 		-vvvv
 
 # Smart deploy - checks if local or testnet
