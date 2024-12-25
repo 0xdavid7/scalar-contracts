@@ -21,7 +21,7 @@ export function getTestSuite() {
   const testSuite = {
     publicClient,
     walletClient,
-    protocolContractAddress: ProjectENV.PROTOCOL_ADDRESS,
+    erc20CrossChainContractAddress: ProjectENV.ERC20_CROSS_CHAIN_ADDRESS,
     gatewayContractAddress: ProjectENV.GATEWAY_ADDRESS,
     account,
   };
