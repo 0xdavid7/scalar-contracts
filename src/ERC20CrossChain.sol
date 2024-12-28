@@ -19,6 +19,8 @@ contract ERC20CrossChain is AxelarExecutable, ERC20, Upgradable, IERC20CrossChai
 
   event TransferRemote(string destinationChain, address destinationContractAddress, address sender, uint256 amount);
 
+  event Executed(string sourceChain, string sourceAddress, uint256 amount, bytes32 sourceTx);
+
   IAxelarGasService public immutable gasService;
 
   constructor(
@@ -78,7 +80,14 @@ contract ERC20CrossChain is AxelarExecutable, ERC20, Upgradable, IERC20CrossChai
       emit FalseSender(_sourceChain, _sourceAddress);
       return;
     }
-    (address to, uint256 amount) = abi.decode(_payload, (address, uint256));
+    (uint256 amount, bytes32 sourceTx, bytes memory recipientChainIdentifier) = abi.decode(
+      _payload,
+      (uint256, bytes32, bytes)
+    );
+
+    emit Executed(_sourceChain, _sourceAddress, amount, sourceTx);
+
+    address to = abi.decode(recipientChainIdentifier, (address));
     _mint(to, amount);
   }
 

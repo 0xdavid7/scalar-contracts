@@ -40,4 +40,17 @@ deploy-token() {
         -vvvv
 }
 
+upgrade-token() {
+    echo "Upgrading ERC20CrossChain..."
+    forge script script/UpgradeERC20CrossChain.s.sol \
+        --sig "run(address,address,address,address,uint8)" \
+        "${PROXY_ADDRESS}" "${PROXY_ADMIN_ADDRESS}" "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" \
+        --rpc-url "${SEPOLIA_RPC_URL}" \
+        --private-key "${PRIVATE_KEY}" \
+        --broadcast \
+        --verify \
+        --etherscan-api-key "${API_KEY_ETHERSCAN}" \
+        -vvvv
+}
+
 "$@"

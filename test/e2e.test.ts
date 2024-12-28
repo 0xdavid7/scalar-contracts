@@ -4,7 +4,7 @@ import { getTestSuite } from "./setup";
 import { ERC20CrossChainABI } from "./abi";
 
 describe("TransferRemote", () => {
-  const { publicClient, walletClient, account, erc20CrossChainContractAddress } = getTestSuite();
+  const { publicClient, walletClient, account, contractAddress } = getTestSuite();
   it("should successfully transfer remote", async () => {
     // Prepare test data
     const destinationChain = "bitcoin|4";
@@ -15,7 +15,7 @@ describe("TransferRemote", () => {
 
     // Simulate transaction to estimate gas
     const { request } = await publicClient.simulateContract({
-      address: erc20CrossChainContractAddress as `0x${string}`,
+      address: contractAddress as `0x${string}`,
       abi: ERC20CrossChainABI,
       functionName: "transferRemote",
       args: [destinationChain, destinationContractAddress, amount, encodedMetadata],
@@ -30,6 +30,6 @@ describe("TransferRemote", () => {
 
     // Assertions
     expect(receipt.status).toBe("success");
-    expect(receipt.to).toBe(erc20CrossChainContractAddress as `0x${string}`);
+    expect(receipt.to).toBe(contractAddress as `0x${string}`);
   });
 });
