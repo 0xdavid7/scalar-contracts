@@ -163,15 +163,15 @@ deploy-bnb:
 		--verifier-url https://api-testnet.bscscan.com/api \
 		--etherscan-api-key ${API_KEY_BSCSCAN}
 
-	@forge script script/DeployProtocol.s.sol \
-		--sig "run(string,string,address,address)" \
-		$(TOKEN_NAME) $(TOKEN_SYMBOL) $(GATEWAY_ADDRESS) $(GAS_SERVICE_ADDRESS) \
-		--rpc-url ${BNB_RPC_URL} \
-		--private-key ${PRIVATE_KEY} \
+	@forge script script/DeployERC20CrossChain.s.sol \
+		--sig "run(address,address,uint8,string,string)" \
+		"${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" "${TOKEN_NAME}" "${TOKEN_SYMBOL}" \
+		--rpc-url "${BNB_RPC_URL}" \
+		--private-key "${PRIVATE_KEY}" \
 		--broadcast \
 		--verify \
 		--verifier-url https://api-testnet.bscscan.com/api \
-		--etherscan-api-key ${API_KEY_BSCSCAN} \
+		--etherscan-api-key "${API_KEY_BSCSCAN}" \
 		-vvvv
 
 # Smart deploy - checks if local or testnet

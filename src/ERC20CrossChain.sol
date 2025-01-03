@@ -76,10 +76,10 @@ contract ERC20CrossChain is AxelarExecutable, ERC20, Upgradable, IERC20CrossChai
     string calldata _sourceAddress,
     bytes calldata _payload
   ) internal override {
-    if (_sourceAddress.toAddress() != address(this)) {
-      emit FalseSender(_sourceChain, _sourceAddress);
-      return;
-    }
+    // if (_sourceAddress.toAddress() != address(this)) {
+    //   emit FalseSender(_sourceChain, _sourceAddress);
+    //   return;
+    // }
     (uint256 amount, bytes32 sourceTx, bytes memory recipientChainIdentifier) = abi.decode(
       _payload,
       (uint256, bytes32, bytes)

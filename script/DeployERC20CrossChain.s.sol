@@ -7,6 +7,8 @@ import { console2 } from "forge-std/src/console2.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
+import { IAxelarGateway } from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
+
 contract DeployERC20CrossChain is BaseScript {
   function run(
     address gateway,
@@ -34,6 +36,14 @@ contract DeployERC20CrossChain is BaseScript {
     );
 
     console2.log("Proxy deployed at:", address(proxy));
+
+    // function deployToken(bytes calldata params, bytes32) external onlySelf {
+    //     (string memory name, string memory symbol, uint8 decimals, uint256 cap, address tokenAddress, uint256 mintLimit) = abi.decode(
+    //         params,
+    //         (string, string, uint8, uint256, address, uint256)
+    //     );
+
+    
 
     return ERC20CrossChain(address(proxy));
   }
