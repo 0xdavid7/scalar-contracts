@@ -8,25 +8,29 @@ import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin
 import { ITransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract UpgradeERC20CrossChain is BaseScript {
-  function run(
-    address proxyAddress,
-    address proxyAdminAddress,
-    address gateway,
-    address gasService,
-    uint8 decimals
-  ) public broadcast returns (ERC20CrossChain) {
-    // Deploy new implementation
-    ERC20CrossChain newImplementation = new ERC20CrossChain(gateway, gasService, decimals);
-    console2.log("New implementation deployed at:", address(newImplementation));
+    function run(
+        address proxyAddress,
+        address proxyAdminAddress,
+        address gateway,
+        address gasService,
+        uint8 decimals
+    )
+        public
+        broadcast
+        returns (ERC20CrossChain)
+    {
+        // Deploy new implementation
+        ERC20CrossChain newImplementation = new ERC20CrossChain(gateway, gasService, decimals);
+        console2.log("New implementation deployed at:", address(newImplementation));
 
-    // Get ProxyAdmin instance
-    ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
+        // Get ProxyAdmin instance
+        ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
 
-    // Upgrade proxy to new implementation
-    proxyAdmin.upgrade(ITransparentUpgradeableProxy(payable(proxyAddress)), address(newImplementation));
+        // Upgrade proxy to new implementation
+        proxyAdmin.upgrade(ITransparentUpgradeableProxy((proxyAddress)), address(newImplementation));
 
-    console2.log("Proxy upgraded to new implementation");
+        console2.log("Proxy upgraded to new implementation");
 
-    return ERC20CrossChain(proxyAddress);
-  }
+        return ERC20CrossChain(proxyAddress);
+    }
 }
