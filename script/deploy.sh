@@ -67,10 +67,10 @@ info() {
 #         -vvvv
 # }
 
-deploy-axelar() {
+deploy-scalar() {
     local network=$1
     if [ -z "$network" ]; then
-        echo "Usage: deploy-axelar <network>"
+        echo "Usage: deploy-scalar <network>"
         echo "Supported networks: sepolia, bnb-testnet"
         exit 1
     fi
@@ -85,16 +85,18 @@ deploy-axelar() {
 
     info
 
+    local address=${WALLET_ADDRESS:-$(cast wallet address ${PRIVATE_KEY})}
+    echo "Wallet address: ${address}"
     # Add balance check
-    local balance=$(cast balance ${WALLET_ADDRESS:-$(cast wallet address ${PRIVATE_KEY})} --rpc-url ${RPC_URL})
+    local balance=$(cast balance ${address} --rpc-url ${RPC_URL})
     local balance_eth=$(cast --from-wei ${balance})
     echo "Current wallet balance: ${balance_eth} ETH"
 
     # Add gas estimation with buffer
-    local gas_estimate=$(forge script script/DeployAxelar.s.sol --rpc-url ${RPC_URL} --private-key ${PRIVATE_KEY} -vvvv | grep "Estimated amount required" | awk '{print $4}')
+    local gas_estimate=$(forge script script/DeployScalar.s.sol --rpc-url ${RPC_URL} --private-key ${PRIVATE_KEY} -vvvv | grep "Estimated amount required" | awk '{print $4}')
     echo "Estimated gas required: ${gas_estimate} ETH"
 
-    if (($(echo "${balance_eth} < ${gas_estimate} * 1.2" | bc -l))); then
+    if (($(echo "${balance_eth} < ${gas_estimate} * 1.1" | bc -l))); then
         echo "Error: Insufficient funds. Please ensure you have at least ${gas_estimate} ETH (plus buffer for safety)"
         exit 1
     fi
@@ -113,7 +115,7 @@ deploy-axelar() {
     fi
 
     while true; do
-        read -p "Are you sure you want to deploy Axelar contracts? (y/n): " answer
+        read -p "Are you sure you want to deploy Scalar contracts? (y/n): " answer
         answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
         if [ "$answer" = "y" ] || [ "$answer" = "yes" ]; then
             break
@@ -124,13 +126,13 @@ deploy-axelar() {
         echo "Please answer 'y' or 'n'"
     done
 
-    local deploy_message="Deploying Axelar contracts..."
+    local deploy_message="Deploying Scalar contracts..."
     if [ "$network" = "bnb-testnet" ]; then
         deploy_message="Deploying Gateway to BNB Smart Chain Testnet..."
     fi
 
     echo "$deploy_message"
-    forge script script/DeployAxelar.s.sol \
+    forge script script/DeployScalar.s.sol \
         -vvvv \
         --private-key ${PRIVATE_KEY} \
         --broadcast \
