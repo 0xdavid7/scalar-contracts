@@ -9,11 +9,7 @@
   "dependencies": {
     "@axelar-network/axelar-cgp-solidity": "^6.4.0",
     "@axelar-network/axelar-gmp-sdk-solidity": "^5.10.0",
-    "@openzeppelin/contracts": "^4.9.6",
-    "dotenv": "^16.4.7",
-    "ethers": "^6.13.4",
-    "viem": "^2.21.57",
-    "zod": "^3.24.1"
+    "@openzeppelin/contracts": "^4.9.6"
   },
   "devDependencies": {
     "@types/bun": "^1.1.14",

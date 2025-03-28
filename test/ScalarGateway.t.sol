@@ -39,4 +39,13 @@ contract ScalarGatewayTest is Test {
         vm.expectRevert(ScalarGateway.NotInitializedSession.selector);
         gateway.getSession(keccak256("test"));
     }
+
+    function testEncodePacked() public pure {
+        bytes1 data1 = 0x01;
+        bytes2 data2 = 0x0102;
+        bytes3 data3 = 0x010203;
+        string memory data4 = "0x04";
+        bytes memory data = abi.encodePacked(data1, data2, data3, data4);
+        console2.logBytes(data);
+    }
 }

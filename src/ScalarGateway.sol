@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.28;
 
 import { AxelarGateway } from "@axelar-network/axelar-cgp-solidity/contracts/AxelarGateway.sol";
 import { ECDSA } from "@axelar-network/axelar-cgp-solidity/contracts/ECDSA.sol";
@@ -23,22 +23,21 @@ contract ScalarGateway is AxelarGateway {
     error PhaseNotChanged();
     error PhaseAlreadyExists();
 
-    event SwitchPhase(uint64 indexed sequence, Phase from, Phase to);
+    event SwitchPhase(bytes32 indexed custodianGroupId, uint64 indexed sequence, Phase from, Phase to);
     event RegisterCustodianGroup(bytes32 indexed custodianGroupId, uint64 sequence, Phase phase);
 
     bytes32 internal constant SELECTOR_SWITCH_PHASE = keccak256("switchPhase");
     bytes32 internal constant SELECTOR_REGISTER_CUSTODIAN_GROUP = keccak256("registerCustodianGroup");
     bytes32 internal constant SELECTOR_DEPLOY_TOKEN2 = keccak256("deployToken2");
-    bytes32 internal constant SElECTOR_REDEEM_TOKEN = keccak256("redeemToken");
+    bytes32 internal constant SELECTOR_REDEEM_TOKEN = keccak256("redeemToken");
 
     // mapping of custodian group id to session
-    mapping(bytes32 => Session) public sessions;
+    mapping(bytes32 groupId => Session session) public sessions;
     // mapping of token symbol to custodian group id
-    mapping(string => bytes32) public tokenCustodianGroupIds;
+    mapping(string symbol => bytes32 groupId) public tokenCustodianGroupIds;
 
     constructor(address authModule, address tokenDeployer) AxelarGateway(authModule, tokenDeployer) { }
 
-    // TODO: Add set_session function
     function execute2(bytes calldata input) external {
         (bytes memory data, bytes memory proof) = abi.decode(input, (bytes, bytes));
 
@@ -57,50 +56,53 @@ contract ScalarGateway is AxelarGateway {
         if (chainId != block.chainid) revert InvalidChainId();
         uint256 commandsLength = commandIds.length;
         if (commandsLength != commands.length || commandsLength != params.length) revert InvalidCommands();
+
         for (uint256 i; i < commandsLength; ++i) {
-            bytes32 commandId = commandIds[i];
-            // Ignore if duplicate commandId received
-            if (isCommandExecuted(commandId)) continue;
-
-            bytes4 commandSelector;
-            bytes32 commandHash = keccak256(abi.encodePacked(commands[i]));
-            if (commandHash == SELECTOR_DEPLOY_TOKEN) {
-                commandSelector = AxelarGateway.deployToken.selector;
-            } else if (commandHash == SELECTOR_MINT_TOKEN) {
-                commandSelector = AxelarGateway.mintToken.selector;
-            } else if (commandHash == SELECTOR_APPROVE_CONTRACT_CALL) {
-                commandSelector = AxelarGateway.approveContractCall.selector;
-            } else if (commandHash == SELECTOR_APPROVE_CONTRACT_CALL_WITH_MINT) {
-                commandSelector = AxelarGateway.approveContractCallWithMint.selector;
-            } else if (commandHash == SELECTOR_BURN_TOKEN) {
-                commandSelector = AxelarGateway.burnToken.selector;
-            } else if (commandHash == SELECTOR_TRANSFER_OPERATORSHIP) {
-                if (!allowOperatorshipTransfer) continue;
-
-                allowOperatorshipTransfer = false;
-                commandSelector = AxelarGateway.transferOperatorship.selector;
-            } else if (commandHash == SELECTOR_SWITCH_PHASE) {
-                commandSelector = ScalarGateway.switchPhase.selector;
-            } else if (commandHash == SELECTOR_REGISTER_CUSTODIAN_GROUP) {
-                commandSelector = ScalarGateway.registerCustodianGroup.selector;
-            } else if (commandHash == SELECTOR_DEPLOY_TOKEN2) {
-                commandSelector = ScalarGateway.deployToken2.selector;
-            } else if (commandHash == SElECTOR_REDEEM_TOKEN) {
-                commandSelector = ScalarGateway.redeemToken.selector;
-            } else {
-                // Ignore unknown commands
-                continue;
-            }
-            // Prevent a re-entrancy from executing this command before it can be marked as successful.
-            _setCommandExecuted(commandId, true);
-
-            // slither-disable-next-line calls-loop,reentrancy-no-eth
-            (bool success,) = address(this).call(abi.encodeWithSelector(commandSelector, params[i], commandId));
-
-            // slither-disable-next-line reentrancy-events
-            if (success) emit Executed(commandId);
-            else _setCommandExecuted(commandId, false);
+            _executeCommand(commandIds[i], commands[i], params[i], allowOperatorshipTransfer);
+            allowOperatorshipTransfer = false;
         }
+    }
+
+    function _executeCommand(
+        bytes32 commandId,
+        string memory command,
+        bytes memory params,
+        bool allowOperatorshipTransfer
+    )
+        internal
+    {
+        if (isCommandExecuted(commandId)) return;
+
+        bytes4 commandSelector = _getCommandSelector(keccak256(abi.encodePacked(command)), allowOperatorshipTransfer);
+
+        if (commandSelector == bytes4(0)) return;
+
+        _setCommandExecuted(commandId, true);
+
+        (bool success,) = address(this).call(abi.encodeWithSelector(commandSelector, params, commandId));
+
+        if (success) emit Executed(commandId);
+        else _setCommandExecuted(commandId, false);
+    }
+
+    function _getCommandSelector(bytes32 commandHash, bool allowOperatorshipTransfer) internal pure returns (bytes4) {
+        if (commandHash == SELECTOR_DEPLOY_TOKEN) return AxelarGateway.deployToken.selector;
+        if (commandHash == SELECTOR_MINT_TOKEN) return AxelarGateway.mintToken.selector;
+        if (commandHash == SELECTOR_APPROVE_CONTRACT_CALL) return AxelarGateway.approveContractCall.selector;
+        if (commandHash == SELECTOR_APPROVE_CONTRACT_CALL_WITH_MINT) {
+            return AxelarGateway.approveContractCallWithMint.selector;
+        }
+        if (commandHash == SELECTOR_BURN_TOKEN) return AxelarGateway.burnToken.selector;
+        if (commandHash == SELECTOR_TRANSFER_OPERATORSHIP) {
+            if (!allowOperatorshipTransfer) return bytes4(0);
+            return AxelarGateway.transferOperatorship.selector;
+        }
+        if (commandHash == SELECTOR_SWITCH_PHASE) return ScalarGateway.switchPhase.selector;
+        if (commandHash == SELECTOR_REGISTER_CUSTODIAN_GROUP) return ScalarGateway.registerCustodianGroup.selector;
+        if (commandHash == SELECTOR_DEPLOY_TOKEN2) return ScalarGateway.deployToken2.selector;
+        if (commandHash == SELECTOR_REDEEM_TOKEN) return ScalarGateway.redeemToken.selector;
+
+        return bytes4(0);
     }
 
     function redeemToken(bytes calldata params, bytes32) external {
@@ -111,6 +113,8 @@ contract ScalarGateway is AxelarGateway {
             string memory symbol,
             uint256 amount
         ) = abi.decode(params, (string, string, bytes, string, uint256));
+
+        // TODO: validate the burned amount with the total of resevered utxos
 
         _burnTokenFrom(msg.sender, symbol, amount);
 
@@ -129,6 +133,8 @@ contract ScalarGateway is AxelarGateway {
             uint256 mintLimit,
             bytes32 custodianGroupId
         ) = abi.decode(params, (string, string, uint8, uint256, address, uint256, bytes32));
+
+        _safeGetSession(custodianGroupId);
 
         if (tokenCustodianGroupIds[symbol] != bytes32(0)) revert TokenAlreadyExists(symbol);
 
@@ -183,6 +189,7 @@ contract ScalarGateway is AxelarGateway {
         session.sequence = 1;
         session.phase = Phase.Preparing;
         _setSession(custodianGroupId, session);
+        emit SwitchPhase(custodianGroupId, session.sequence, Phase.Preparing, Phase.Preparing);
         emit RegisterCustodianGroup(custodianGroupId, session.sequence, session.phase);
     }
 
@@ -206,7 +213,7 @@ contract ScalarGateway is AxelarGateway {
             session.sequence += 1;
         }
         _setSession(custodianGroupId, session);
-        emit SwitchPhase(session.sequence, oldPhase, targetPhase);
+        emit SwitchPhase(custodianGroupId, session.sequence, oldPhase, targetPhase);
     }
 
     function _safeGetSession(bytes32 _custodianGroupId) internal view returns (Session memory) {
