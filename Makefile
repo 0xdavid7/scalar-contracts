@@ -186,3 +186,10 @@ deploy: info
 
 anvil:
 	anvil --host 0.0.0.0 --chain-id 1337
+test-match:
+	@if [ -z "$(match)" ]; then \
+		echo "Usage: make test-match match='Foo Bar Baz'"; \
+		echo "Example: make test-match match="test_SetFeeRate"      "; \
+		exit 1; \
+	fi
+	@forge test --match-test $(match) -vvvv

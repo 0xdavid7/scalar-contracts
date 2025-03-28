@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IScalarToken } from "./interfaces/IScalarToken.sol";
 
 /**
@@ -12,6 +12,8 @@ import { IScalarToken } from "./interfaces/IScalarToken.sol";
 contract ScalarToken is ERC20, IScalarToken {
     address public owner;
     address public protocolContract;
+
+    error OnlyOwner();
 
     /**
      * @notice Sets the initial owner and token details.
@@ -24,7 +26,9 @@ contract ScalarToken is ERC20, IScalarToken {
      * @notice Modifier to restrict access to only the contract owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner, "Ownable: caller is not the owner");
+        if (msg.sender != owner) {
+            revert OnlyOwner();
+        }
         _;
     }
 
@@ -32,10 +36,9 @@ contract ScalarToken is ERC20, IScalarToken {
      * @notice Modifier to restrict access to only the owner or the protocol contract.
      */
     modifier onlyOwnerOrProtocol() {
-        require(
-            msg.sender == owner || msg.sender == protocolContract,
-            "Ownable: caller is not the owner or protocol contract"
-        );
+        if (msg.sender != owner && msg.sender != protocolContract) {
+            revert OnlyOwner();
+        }
         _;
     }
 
@@ -45,7 +48,6 @@ contract ScalarToken is ERC20, IScalarToken {
      * @param amount The number of tokens to mint.
      */
     function mint(address to, uint256 amount) external onlyOwnerOrProtocol {
-        require(amount > 0, "Amount must be greater than 0");
         _mint(to, amount);
     }
 
@@ -54,8 +56,6 @@ contract ScalarToken is ERC20, IScalarToken {
      * @param amount The amount of tokens to burn.
      */
     function burn(uint256 amount) external {
-        require(amount > 0, "Amount must be greater than 0");
-        require(amount <= balanceOf(msg.sender), "Insufficient balance");
         _burn(msg.sender, amount);
     }
 
