@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.9;
 
 import { AxelarGateway } from "@axelar-network/axelar-cgp-solidity/contracts/AxelarGateway.sol";
 import { ECDSA } from "@axelar-network/axelar-cgp-solidity/contracts/ECDSA.sol";
@@ -32,9 +32,9 @@ contract ScalarGateway is AxelarGateway {
     bytes32 internal constant SELECTOR_REDEEM_TOKEN = keccak256("redeemToken");
 
     // mapping of custodian group id to session
-    mapping(bytes32 groupId => Session session) public sessions;
+    mapping(bytes32 => Session) public sessions;
     // mapping of token symbol to custodian group id
-    mapping(string symbol => bytes32 groupId) public tokenCustodianGroupIds;
+    mapping(string => bytes32) public tokenCustodianGroupIds;
 
     constructor(address authModule, address tokenDeployer) AxelarGateway(authModule, tokenDeployer) { }
 
@@ -189,7 +189,8 @@ contract ScalarGateway is AxelarGateway {
         session.sequence = 1;
         session.phase = Phase.Preparing;
         _setSession(custodianGroupId, session);
-        emit SwitchPhase(custodianGroupId, session.sequence, Phase.Preparing, Phase.Preparing);
+        // we set the phase from Executing to Preparing because of intialized session
+        emit SwitchPhase(custodianGroupId, session.sequence, Phase.Executing, Phase.Preparing);
         emit RegisterCustodianGroup(custodianGroupId, session.sequence, session.phase);
     }
 
