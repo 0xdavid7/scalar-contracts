@@ -5,23 +5,18 @@ import { BaseScript } from "./Base.s.sol";
 
 import { TokenDeployer } from "@axelar-network/axelar-cgp-solidity/contracts/TokenDeployer.sol";
 
-import { AxelarGasService } from "@axelar-network/axelar-cgp-solidity/contracts/gas-service/AxelarGasService.sol";
-
 import { AxelarAuthWeighted } from "@axelar-network/axelar-cgp-solidity/contracts/auth/AxelarAuthWeighted.sol";
 
 import { ScalarGateway } from "../src/ScalarGateway.sol";
 
 contract Deploy is BaseScript {
-    function run() public broadcast returns (TokenDeployer, AxelarGasService, AxelarAuthWeighted, ScalarGateway) {
-        TokenDeployer tokenDeployer = new TokenDeployer();
+  function run() public broadcast returns (TokenDeployer, AxelarAuthWeighted, ScalarGateway) {
+    TokenDeployer tokenDeployer = new TokenDeployer();
+    bytes[] memory operators = new bytes[](0);
+    AxelarAuthWeighted authWeighted = new AxelarAuthWeighted(operators);
 
-        AxelarGasService gasService = new AxelarGasService(broadcaster);
+    ScalarGateway gateway = new ScalarGateway(address(authWeighted), address(tokenDeployer));
 
-        bytes[] memory operators = new bytes[](0);
-        AxelarAuthWeighted authWeighted = new AxelarAuthWeighted(operators);
-
-        ScalarGateway gateway = new ScalarGateway(address(authWeighted), address(tokenDeployer));
-
-        return (tokenDeployer, gasService, authWeighted, gateway);
-    }
+    return (tokenDeployer, authWeighted, gateway);
+  }
 }
