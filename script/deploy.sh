@@ -1,159 +1,124 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
+# Color definitions
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+env_file=".env"
+if [ -f "$env_file" ]; then
+    export $(cat "$env_file" | grep -v '#' | sed 's/\r$//' | xargs)
+else
+    echo "${env_file} file not found"
+    exit 1
+fi
+
+# Function to check required environment variables
+check_env() {
+    local missing=0
+
+    if [ -z "$PRIVATE_KEY" ]; then
+        echo -e "${RED}Error: PRIVATE_KEY is not set${NC}"
+        missing=1
+    fi
+
+    if [ -z "$API_KEY_ETHERSCAN" ]; then
+        echo -e "${RED}Error: API_KEY_ETHERSCAN is not set${NC}"
+        missing=1
+    fi
+
+    if [ -z "$ALCHEMY_API_KEY" ]; then
+        echo -e "${RED}Error: ALCHEMY_API_KEY is not set${NC}"
+        missing=1
+    fi
+
+    if [ $missing -eq 1 ]; then
+        exit 1
+    fi
+}
+
+# Function to set network-specific configurations
+set_network_config() {
+    case "$NETWORK" in
+    "mainnet")
+        VERIFY=true
+        ;;
+    "sepolia")
+        VERIFY=true
+        ;;
+    "bnb_testnet")
+        VERIFY=true
+        ;;
+    "anvil")
+        VERIFY=false
+        ;;
+    *)
+        echo -e "${RED}Error: Unsupported network '$NETWORK'${NC}"
+        echo "Supported networks: mainnet, base, bnb, sepolia"
+        exit 1
+        ;;
+    esac
+}
+
+# Function to display information
 info() {
-    # Define colors
-    GREEN='\033[0;32m'
-    BLUE='\033[0;34m'
-    NC='\033[0m' # No Color
-
-    echo -e "\n${GREEN}════════════════════════════════════ ENV VARIABLES ════════════════════════════════════${NC}"
-    echo -e "${BLUE}PRIVATE_KEY:${NC}         $PRIVATE_KEY"
-    echo -e "${BLUE}RPC_URL:${NC}             $RPC_URL"
-    echo -e "${BLUE}VERIFIER_URL:${NC}        $VERIFIER_URL"
-    echo -e "${BLUE}SCANNER_API_KEY:${NC}     $SCANNER_API_KEY"
+    echo -e "\n${GREEN}════════════════════════════════════ DEPLOYMENT CONFIG ════════════════════════════════════${NC}"
+    echo -e "${BLUE}NETWORK:${NC}            $NETWORK"
+    echo -e "${BLUE}RPC_URL:${NC}            $RPC_URL"
+    echo -e "${BLUE}VERIFIER_URL:${NC}       $VERIFIER_URL"
+    echo -e "${BLUE}API_KEY_ETHERSCAN:${NC}    $API_KEY_ETHERSCAN"
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════════════════════════════${NC}\n"
 }
 
-deploy-scalar() {
-    local network=$1
-    if [ -z "$network" ]; then
-        echo "Usage: deploy-scalar <network>"
-        echo "Supported networks: sepolia, bnb-testnet"
-        exit 1
+# Function to deploy the contract
+deploy() {
+    echo -e "${GREEN}Deploying DeployScalar contract...${NC}"
+    # Build Forge script command
+    FORGE_CMD="forge script script/DeployScalar.s.sol \
+        --chain-id $NETWORK \
+        --rpc-url $NETWORK \
+        --private-key $PRIVATE_KEY \
+        --broadcast"
+
+    # if network is fork, not verify
+    if [ "$VERIFY" = true ]; then
+        FORGE_CMD="$FORGE_CMD --etherscan-api-key $API_KEY_ETHERSCAN"
+        FORGE_CMD="$FORGE_CMD --verify $VERIFIER_URL"
     fi
 
-    local env_file=".env.${network}"
-    if [ -f "$env_file" ]; then
-        export $(cat "$env_file" | grep -v '#' | sed 's/\r$//' | xargs)
+    # Execute the command
+    echo "Executing: $FORGE_CMD"
+
+    read -p "Continue with deployment? (y/n): " confirm
+    if [[ $confirm != "y" && $confirm != "Y" ]]; then
+        echo "Deployment cancelled"
+        exit 0
+    fi
+
+    eval $FORGE_CMD
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Deployment successful!${NC}"
     else
-        echo "${env_file} file not found"
-        exit 1
-    fi
-
-    info
-
-    local address=${WALLET_ADDRESS:-$(cast wallet address ${PRIVATE_KEY})}
-    echo "Wallet address: ${address}"
-    # Add balance check
-    local balance=$(cast balance ${address} --rpc-url ${RPC_URL})
-    local balance_eth=$(cast --from-wei ${balance})
-    echo "Current wallet balance: ${balance_eth} ETH"
-
-    # Add gas estimation with buffer
-    local gas_estimate=$(forge script script/DeployScalar.s.sol --rpc-url ${RPC_URL} --private-key ${PRIVATE_KEY} -vvvv | grep "Estimated amount required" | awk '{print $4}')
-    echo "Estimated gas required: ${gas_estimate} ETH"
-
-    if (($(echo "${balance_eth} < ${gas_estimate} * 1.1" | bc -l))); then
-        echo "Error: Insufficient funds. Please ensure you have at least ${gas_estimate} ETH (plus buffer for safety)"
-        exit 1
-    fi
-
-    # Add nonce checking and management
-    local wallet_address=${WALLET_ADDRESS:-$(cast wallet address ${PRIVATE_KEY})}
-    local current_nonce=$(cast nonce ${wallet_address} --rpc-url ${RPC_URL})
-    echo "Current nonce: ${current_nonce}"
-
-    # Optional: Allow manual nonce override
-    if [ ! -z "${NONCE}" ]; then
-        echo "Using manual nonce override: ${NONCE}"
-        NONCE_FLAG="--nonce ${NONCE}"
-    else
-        NONCE_FLAG=""
-    fi
-
-    while true; do
-        read -p "Are you sure you want to deploy Scalar contracts? (y/n): " answer
-        answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
-        if [ "$answer" = "y" ] || [ "$answer" = "yes" ]; then
-            break
-        elif [ "$answer" = "n" ] || [ "$answer" = "no" ]; then
-            echo "Deployment cancelled"
-            exit 0
-        fi
-        echo "Please answer 'y' or 'n'"
-    done
-
-    local deploy_message="Deploying Scalar contracts..."
-    if [ "$network" = "bnb-testnet" ]; then
-        deploy_message="Deploying Gateway to BNB Smart Chain Testnet..."
-    fi
-
-    echo "$deploy_message"
-    forge script script/DeployScalar.s.sol \
-        -vvvv \
-        --private-key ${PRIVATE_KEY} \
-        --broadcast \
-        --rpc-url ${RPC_URL} \
-        --verify \
-        --verifier-url ${VERIFIER_URL} \
-        --etherscan-api-key ${SCANNER_API_KEY} \
-        --legacy \
-        ${NONCE_FLAG}
-
-    if [ $? -ne 0 ]; then
-        echo "Error: Transaction failed. Possible nonce issues:"
-        echo "Current nonce is: ${current_nonce}"
-        echo "Try the following:"
-        echo "1. Reset nonce: NONCE=${current_nonce} ./script/deploy.sh ${network}"
-        echo "2. Clear pending transactions in your wallet"
-        echo "3. Wait for pending transactions to complete"
+        echo -e "${RED}Deployment failed!${NC}"
         exit 1
     fi
 }
 
-"$@"
+# Main script execution
+main() {
+    # Parse arguments
+    NETWORK=${1:-"sepolia"}
 
+    # Check required environment variables
+    check_env
+    # Set network configuration
+    set_network_config
+    # Display deployment information
+    info
+    # Deploy the contract
+    deploy
+}
 
-
-# deploy-protocol() {
-#     echo "Deploying protocol..."
-#     forge script script/DeployProtocol.s.sol \
-#         --sig "run(string,string,address,address)" \
-#         "${TOKEN_NAME}" "${TOKEN_SYMBOL}" "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" \
-#         --rpc-url "${SEPOLIA_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
-#         -vvvv
-# }
-
-# deploy-token() {
-#     echo "Deploying ERC20CrossChain..."
-#     forge script script/DeployERC20CrossChain.s.sol \
-#         --sig "run(address,address,uint8,string,string)" \
-#         "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" "${TOKEN_NAME}" "${TOKEN_SYMBOL}" \
-#         --rpc-url "${SEPOLIA_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
-#         -vvvv
-# }
-
-# deploy-token-bnb() {
-#     echo "Deploying ERC20CrossChain..."
-#     forge script script/DeployERC20CrossChain.s.sol \
-#         --sig "run(address,address,uint8,string,string)" \
-#         "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" "${TOKEN_NAME}" "${TOKEN_SYMBOL}" \
-#         --rpc-url "${BNB_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --verifier-url https://api-testnet.bscscan.com/api \
-#         --etherscan-api-key "${API_KEY_BSCSCAN}" \
-#         -vvvv
-# }
-
-# upgrade-token() {
-#     echo "Upgrading ERC20CrossChain..."
-#     forge script script/UpgradeERC20CrossChain.s.sol \
-#         --sig "run(address,address,address,address,uint8)" \
-#         "${PROXY_ADDRESS}" "${PROXY_ADMIN_ADDRESS}" "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" \
-#         --rpc-url "${SEPOLIA_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
-#         -vvvv
-# }
+# Execute main function
+main "$@"
