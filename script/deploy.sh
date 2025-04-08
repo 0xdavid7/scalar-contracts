@@ -14,59 +14,6 @@ info() {
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════════════════════════════${NC}\n"
 }
 
-# deploy-protocol() {
-#     echo "Deploying protocol..."
-#     forge script script/DeployProtocol.s.sol \
-#         --sig "run(string,string,address,address)" \
-#         "${TOKEN_NAME}" "${TOKEN_SYMBOL}" "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" \
-#         --rpc-url "${SEPOLIA_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
-#         -vvvv
-# }
-
-# deploy-token() {
-#     echo "Deploying ERC20CrossChain..."
-#     forge script script/DeployERC20CrossChain.s.sol \
-#         --sig "run(address,address,uint8,string,string)" \
-#         "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" "${TOKEN_NAME}" "${TOKEN_SYMBOL}" \
-#         --rpc-url "${SEPOLIA_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
-#         -vvvv
-# }
-
-# deploy-token-bnb() {
-#     echo "Deploying ERC20CrossChain..."
-#     forge script script/DeployERC20CrossChain.s.sol \
-#         --sig "run(address,address,uint8,string,string)" \
-#         "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" "${TOKEN_NAME}" "${TOKEN_SYMBOL}" \
-#         --rpc-url "${BNB_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --verifier-url https://api-testnet.bscscan.com/api \
-#         --etherscan-api-key "${API_KEY_BSCSCAN}" \
-#         -vvvv
-# }
-
-# upgrade-token() {
-#     echo "Upgrading ERC20CrossChain..."
-#     forge script script/UpgradeERC20CrossChain.s.sol \
-#         --sig "run(address,address,address,address,uint8)" \
-#         "${PROXY_ADDRESS}" "${PROXY_ADMIN_ADDRESS}" "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" \
-#         --rpc-url "${SEPOLIA_RPC_URL}" \
-#         --private-key "${PRIVATE_KEY}" \
-#         --broadcast \
-#         --verify \
-#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
-#         -vvvv
-# }
-
 deploy-scalar() {
     local network=$1
     if [ -z "$network" ]; then
@@ -155,3 +102,58 @@ deploy-scalar() {
 }
 
 "$@"
+
+
+
+# deploy-protocol() {
+#     echo "Deploying protocol..."
+#     forge script script/DeployProtocol.s.sol \
+#         --sig "run(string,string,address,address)" \
+#         "${TOKEN_NAME}" "${TOKEN_SYMBOL}" "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" \
+#         --rpc-url "${SEPOLIA_RPC_URL}" \
+#         --private-key "${PRIVATE_KEY}" \
+#         --broadcast \
+#         --verify \
+#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
+#         -vvvv
+# }
+
+# deploy-token() {
+#     echo "Deploying ERC20CrossChain..."
+#     forge script script/DeployERC20CrossChain.s.sol \
+#         --sig "run(address,address,uint8,string,string)" \
+#         "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" "${TOKEN_NAME}" "${TOKEN_SYMBOL}" \
+#         --rpc-url "${SEPOLIA_RPC_URL}" \
+#         --private-key "${PRIVATE_KEY}" \
+#         --broadcast \
+#         --verify \
+#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
+#         -vvvv
+# }
+
+# deploy-token-bnb() {
+#     echo "Deploying ERC20CrossChain..."
+#     forge script script/DeployERC20CrossChain.s.sol \
+#         --sig "run(address,address,uint8,string,string)" \
+#         "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" "${TOKEN_NAME}" "${TOKEN_SYMBOL}" \
+#         --rpc-url "${BNB_RPC_URL}" \
+#         --private-key "${PRIVATE_KEY}" \
+#         --broadcast \
+#         --verify \
+#         --verifier-url https://api-testnet.bscscan.com/api \
+#         --etherscan-api-key "${API_KEY_BSCSCAN}" \
+#         -vvvv
+# }
+
+# upgrade-token() {
+#     echo "Upgrading ERC20CrossChain..."
+#     forge script script/UpgradeERC20CrossChain.s.sol \
+#         --sig "run(address,address,address,address,uint8)" \
+#         "${PROXY_ADDRESS}" "${PROXY_ADMIN_ADDRESS}" "${GATEWAY_ADDRESS}" "${GAS_SERVICE_ADDRESS}" "18" \
+#         --rpc-url "${SEPOLIA_RPC_URL}" \
+#         --private-key "${PRIVATE_KEY}" \
+#         --broadcast \
+#         --verify \
+#         --etherscan-api-key "${API_KEY_ETHERSCAN}" \
+#         -vvvv
+# }

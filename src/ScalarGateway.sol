@@ -79,7 +79,14 @@ contract ScalarGateway is AxelarGateway {
 
         _setCommandExecuted(commandId, true);
 
-        (bool success,) = address(this).call(abi.encodeWithSelector(commandSelector, params, commandId));
+        bool success;
+
+        // check if the command is redeemToken
+        if (commandSelector == ScalarGateway.redeemToken.selector) {
+            (success,) = address(this).call(abi.encodeWithSelector(commandSelector, params, msg.sender));
+        } else {
+            (success,) = address(this).call(abi.encodeWithSelector(commandSelector, params, commandId));
+        }
 
         if (success) emit Executed(commandId);
         else _setCommandExecuted(commandId, false);
@@ -105,7 +112,7 @@ contract ScalarGateway is AxelarGateway {
         return bytes4(0);
     }
 
-    function redeemToken(bytes calldata params, bytes32) external {
+    function redeemToken(bytes calldata params, address account) external onlySelf {
         (
             string memory destinationChain,
             string memory destinationContractAddress,
@@ -116,10 +123,10 @@ contract ScalarGateway is AxelarGateway {
 
         // TODO: validate the burned amount with the total of resevered utxos
 
-        _burnTokenFrom(msg.sender, symbol, amount);
+        _burnTokenFrom(account, symbol, amount);
 
         emit ContractCallWithToken(
-            msg.sender, destinationChain, destinationContractAddress, keccak256(payload), payload, symbol, amount
+            account, destinationChain, destinationContractAddress, keccak256(payload), payload, symbol, amount
         );
     }
 
@@ -178,7 +185,7 @@ contract ScalarGateway is AxelarGateway {
         return _safeGetSession(_custodianGroupId);
     }
 
-    function registerCustodianGroup(bytes calldata params, bytes32) external {
+    function registerCustodianGroup(bytes calldata params, bytes32) external onlySelf {
         bytes32 custodianGroupId = abi.decode(params, (bytes32));
 
         Session memory session = _getSession(custodianGroupId);

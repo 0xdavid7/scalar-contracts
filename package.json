@@ -9,10 +9,12 @@
   "dependencies": {
     "@axelar-network/axelar-cgp-solidity": "^6.4.0",
     "@axelar-network/axelar-gmp-sdk-solidity": "^5.10.0",
-    "@openzeppelin/contracts": "^4.9.6"
+    "@openzeppelin/contracts": "^4.9.6",
+    "viem": "^2.24.3",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/bun": "^1.1.14",
+    "@types/bun": "^1.2.8",
     "forge-std": "github:foundry-rs/forge-std#v1.8.1",
     "prettier": "^3.0.0",
     "solhint": "^5.0.5"
