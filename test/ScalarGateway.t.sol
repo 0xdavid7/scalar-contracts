@@ -8,6 +8,7 @@ import { TokenDeployer } from "@axelar-network/axelar-cgp-solidity/contracts/Tok
 import { Test } from "forge-std/src/Test.sol";
 import { console2 } from "forge-std/src/console2.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import { Utils } from "./Utils.sol";
 
 contract ScalarGatewayTest is Test {
   ScalarGateway public gateway;
@@ -17,7 +18,7 @@ contract ScalarGatewayTest is Test {
   address public owner;
   address public broadcaster;
   address[] public operators;
-  uint256[] public weights;
+  mapping(address => uint256) public operatorWeights;
   uint256 constant OPERATOR_COUNT = 4;
   uint256 constant THRESHOLD = 4000;
 
@@ -26,34 +27,55 @@ contract ScalarGatewayTest is Test {
     vm.createSelectFork("mainnet");
 
     operators = new address[](OPERATOR_COUNT);
-    weights = new uint256[](OPERATOR_COUNT);
+    uint256[] memory weights = new uint256[](OPERATOR_COUNT);
 
     for (uint256 i = 0; i < OPERATOR_COUNT; i++) {
       string memory operatorName = string(abi.encodePacked("operator", Strings.toString(i)));
-      console2.log(operatorName);
       operators[i] = makeAddr(operatorName);
       weights[i] = 1000 * (i + 1);
+      operatorWeights[operators[i]] = weights[i];
+      console2.log("operator", i, operators[i]);
     }
 
-    bytes memory ops = abi.encode(operators, weights, THRESHOLD);
+    address[] memory newOperators = Utils.sortAddresses(operators);
+
+    bytes memory ops = abi.encode(newOperators, weights, THRESHOLD);
 
     bytes[] memory recentOps = new bytes[](1);
     recentOps[0] = ops;
 
     auth = new AxelarAuthWeighted(new bytes[](0));
     auth.transferOperatorship(ops);
-   
+
     tokenDeployer = new TokenDeployer();
 
     gateway = new ScalarGateway(address(auth), address(tokenDeployer));
-
   }
 
-  function testGateway() public view {
-    console2.log("testGateway");
-    console2.log("broadcaster", broadcaster);
-    console2.log("OPERATOR_COUNT", OPERATOR_COUNT);
-    console2.log("gateway", address(gateway));
+  function testDeployToken() public view {
+    string memory name = "Test Token";
+    uint256 random = Utils.getRandomInt(type(uint256).max, 1000);
+    string memory symbol = string(abi.encodePacked(name, random));
+    uint8 decimals = 18;
+    uint256 cap = 1000000 * 10 ** decimals;
+    uint256 limit = 1000000 * 10 ** decimals;
+
+    bytes32 commandID = keccak256(abi.encodePacked(name, symbol, decimals, cap, limit));
+
+    bytes32[] memory commandIDs = new bytes32[](1);
+    commandIDs[0] = commandID;
+
+    string[] memory commandNames = new string[](1);
+    commandNames[0] = "deployToken";
+
+    bytes[] memory commands = new bytes[](1);
+    commands[0] = Utils.getDeployCommand(name, symbol, decimals, cap, address(0), limit);
+
+    // Now pass these arrays to the function
+    bytes memory data = Utils.buildCommandBatch(commandIDs, commandNames, commands);
+
+
+    
   }
 
   function test_getSession() public {
