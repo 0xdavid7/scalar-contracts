@@ -6,9 +6,11 @@ import { ScalarGateway } from "../src/ScalarGateway.sol";
 import { AxelarAuthWeighted } from "@axelar-network/axelar-cgp-solidity/contracts/auth/AxelarAuthWeighted.sol";
 import { TokenDeployer } from "@axelar-network/axelar-cgp-solidity/contracts/TokenDeployer.sol";
 import { Test } from "forge-std/src/Test.sol";
-import { console2 } from "forge-std/src/console2.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import { ECDSA } from "@axelar-network/axelar-cgp-solidity/contracts/ECDSA.sol";
+
 import { Utils } from "./Utils.sol";
+import { console2 } from "forge-std/src/console2.sol";
 
 contract ScalarGatewayTest is Test {
   ScalarGateway public gateway;
@@ -18,7 +20,8 @@ contract ScalarGatewayTest is Test {
   address public owner;
   address public broadcaster;
   address[] public operators;
-  mapping(address => uint256) public operatorWeights;
+  uint256[] public operatorWeights;
+  uint256[] operatorPrivKeys;
   uint256 constant OPERATOR_COUNT = 4;
   uint256 constant THRESHOLD = 4000;
 
@@ -27,19 +30,17 @@ contract ScalarGatewayTest is Test {
     vm.createSelectFork("mainnet");
 
     operators = new address[](OPERATOR_COUNT);
-    uint256[] memory weights = new uint256[](OPERATOR_COUNT);
-
+    operatorWeights = new uint256[](OPERATOR_COUNT);
+    operatorPrivKeys = new uint256[](OPERATOR_COUNT);
     for (uint256 i = 0; i < OPERATOR_COUNT; i++) {
       string memory operatorName = string(abi.encodePacked("operator", Strings.toString(i)));
-      operators[i] = makeAddr(operatorName);
-      weights[i] = 1000 * (i + 1);
-      operatorWeights[operators[i]] = weights[i];
-      console2.log("operator", i, operators[i]);
+      (operators[i], operatorPrivKeys[i]) = makeAddrAndKey(operatorName);
+      operatorWeights[i] = 1000 * (i + 1);
     }
 
-    address[] memory newOperators = Utils.sortAddresses(operators);
+    (operators, operatorPrivKeys, operatorWeights) = Utils.sortOperators(operators, operatorPrivKeys, operatorWeights);
 
-    bytes memory ops = abi.encode(newOperators, weights, THRESHOLD);
+    bytes memory ops = abi.encode(operators, operatorWeights, THRESHOLD);
 
     bytes[] memory recentOps = new bytes[](1);
     recentOps[0] = ops;
@@ -52,7 +53,7 @@ contract ScalarGatewayTest is Test {
     gateway = new ScalarGateway(address(auth), address(tokenDeployer));
   }
 
-  function testDeployToken() public view {
+  function testDeployToken() public {
     string memory name = "Test Token";
     uint256 random = Utils.getRandomInt(type(uint256).max, 1000);
     string memory symbol = string(abi.encodePacked(name, random));
@@ -74,8 +75,8 @@ contract ScalarGatewayTest is Test {
     // Now pass these arrays to the function
     bytes memory data = Utils.buildCommandBatch(commandIDs, commandNames, commands);
 
-
-    
+    bytes memory input = _getSingedWeightedExecuteInput(data);
+    gateway.execute2(input);
   }
 
   function test_getSession() public {
@@ -90,5 +91,26 @@ contract ScalarGatewayTest is Test {
     string memory data4 = "0x04";
     bytes memory data = abi.encodePacked(data1, data2, data3, data4);
     console2.logBytes(data);
+  }
+
+  function _getWeightedSignaturesProof(bytes memory data) private view returns (bytes memory) {
+    bytes32 ethSignedMessageHash = ECDSA.toEthSignedMessageHash(keccak256(data));
+
+    bytes[] memory signatures = new bytes[](OPERATOR_COUNT);
+    uint256 totalWeight;
+
+    for (uint256 i = 0; i < OPERATOR_COUNT && totalWeight < THRESHOLD; i++) {
+      (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorPrivKeys[i], ethSignedMessageHash);
+      signatures[i] = abi.encodePacked(r, s, v);
+      totalWeight += operatorWeights[i];
+    }
+
+    bytes memory proof = abi.encode(operators, operatorWeights, THRESHOLD, signatures);
+    return proof;
+  }
+
+  function _getSingedWeightedExecuteInput(bytes memory data) private view returns (bytes memory) {
+    bytes memory proof = _getWeightedSignaturesProof(data);
+    return abi.encode(data, proof);
   }
 }

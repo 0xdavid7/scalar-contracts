@@ -26,7 +26,11 @@ library Utils {
     return string(result);
   }
 
-  function sortAddresses(address[] memory addresses) public pure returns (address[] memory) {
+  function sortOperators(
+    address[] memory addresses,
+    uint256[] memory keys,
+    uint256[] memory weights
+  ) public pure returns (address[] memory, uint256[] memory, uint256[] memory) {
     uint256 length = addresses.length;
     for (uint256 i = 0; i < length - 1; i++) {
       uint256 minIndex = i;
@@ -41,9 +45,17 @@ library Utils {
         address temp = addresses[i];
         addresses[i] = addresses[minIndex];
         addresses[minIndex] = temp;
+
+        uint256 tempKey = keys[i];
+        keys[i] = keys[minIndex];
+        keys[minIndex] = tempKey;
+
+        uint256 tempWeight = weights[i];
+        weights[i] = weights[minIndex];
+        weights[minIndex] = tempWeight;
       }
     }
-    return addresses;
+    return (addresses, keys, weights);
   }
 
   function buildCommandBatch(
