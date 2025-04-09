@@ -53,30 +53,53 @@ contract ScalarGatewayTest is Test {
     gateway = new ScalarGateway(address(auth), address(tokenDeployer));
   }
 
-  function testDeployToken() public {
-    string memory name = "Test Token";
-    uint256 random = Utils.getRandomInt(type(uint256).max, 1000);
-    string memory symbol = string(abi.encodePacked(name, random));
-    uint8 decimals = 18;
-    uint256 cap = 1000000 * 10 ** decimals;
-    uint256 limit = 1000000 * 10 ** decimals;
+  function testRegisterCustodianGroup() public returns (bytes32 custodianGroupUID) {
+    string memory name = "Test Custodian Group";
+    custodianGroupUID = keccak256(abi.encodePacked(name));
+    bytes32[] memory commandIDs = new bytes32[](1);
+    commandIDs[0] = custodianGroupUID;
 
-    bytes32 commandID = keccak256(abi.encodePacked(name, symbol, decimals, cap, limit));
+    string[] memory commandNames = new string[](1);
+    commandNames[0] = "registerCustodianGroup";
+
+    bytes[] memory commands = new bytes[](1);
+    commands[0] = Utils.getRegisterCustodianGroupCommand(custodianGroupUID);
+
+    bytes memory data = Utils.buildCommandBatch(commandIDs, commandNames, commands);
+    bytes memory input = _getSingedWeightedExecuteInput(data);
+    gateway.execute2(input);
+
+    ScalarGateway.Session memory s = gateway.getSession(custodianGroupUID);
+    assertEq(s.sequence, 1);
+    assertEq(uint8(s.phase), uint8(ScalarGateway.Phase.Preparing));
+  }
+
+  // Split the token deployment setup into a separate function
+  function _setupTokenDeployment(
+    string memory name
+  ) private pure returns (string memory symbol, uint8 decimals, uint256 cap, uint256 limit, bytes32 commandID) {
+    uint256 random = Utils.getRandomInt(type(uint256).max, 1000);
+    symbol = string(abi.encodePacked(name, random));
+    decimals = 18;
+    cap = 1000000 * 10 ** decimals;
+    limit = cap;
+    commandID = keccak256(abi.encodePacked(name, symbol, decimals, cap, limit));
+  }
+
+  function testDeployToken2() public {
+    bytes32 custodianGroupUID = testRegisterCustodianGroup();
+    string memory name = "Test Token";
+    (string memory symbol, uint8 decimals, uint256 cap, uint256 limit, bytes32 commandID) = _setupTokenDeployment(name);
 
     bytes32[] memory commandIDs = new bytes32[](1);
     commandIDs[0] = commandID;
-
     string[] memory commandNames = new string[](1);
-    commandNames[0] = "deployToken";
-
+    commandNames[0] = "deployToken2";
     bytes[] memory commands = new bytes[](1);
-    commands[0] = Utils.getDeployCommand(name, symbol, decimals, cap, address(0), limit);
+    commands[0] = abi.encode(name, symbol, decimals, cap, address(0), limit, custodianGroupUID);
 
-    // Now pass these arrays to the function
     bytes memory data = Utils.buildCommandBatch(commandIDs, commandNames, commands);
-
-    bytes memory input = _getSingedWeightedExecuteInput(data);
-    gateway.execute2(input);
+    gateway.execute2(_getSingedWeightedExecuteInput(data));
   }
 
   function test_getSession() public {

@@ -66,14 +66,7 @@ library Utils {
     return abi.encode(block.chainid, commandIDs, commandNames, commands);
   }
 
-  function getDeployCommand(
-    string memory name,
-    string memory symbol,
-    uint8 decimals,
-    uint256 cap,
-    address tokenAddress,
-    uint256 dailyMintLimit
-  ) public pure returns (bytes memory command) {
-    return abi.encode(name, symbol, decimals, cap, tokenAddress, dailyMintLimit);
+  function getRegisterCustodianGroupCommand(bytes32 custodianGroupUID) public pure returns (bytes memory command) {
+    return abi.encode(custodianGroupUID);
   }
 }
