@@ -8,9 +8,11 @@ import { TokenDeployer } from "@axelar-network/axelar-cgp-solidity/contracts/Tok
 import { Test } from "forge-std/src/Test.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import { ECDSA } from "@axelar-network/axelar-cgp-solidity/contracts/ECDSA.sol";
+import { Vm } from "forge-std/src/Vm.sol";
 
 import { Utils } from "./Utils.sol";
 import { console2 } from "forge-std/src/console2.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ScalarGatewayTest is Test {
   ScalarGateway public gateway;
@@ -28,6 +30,8 @@ contract ScalarGatewayTest is Test {
   function setUp() public {
     // Fork mainnet
     vm.createSelectFork("mainnet");
+
+    owner = makeAddr("owner");
 
     operators = new address[](OPERATOR_COUNT);
     operatorWeights = new uint256[](OPERATOR_COUNT);
@@ -56,16 +60,14 @@ contract ScalarGatewayTest is Test {
   function testRegisterCustodianGroup() public returns (bytes32 custodianGroupUID) {
     string memory name = "Test Custodian Group";
     custodianGroupUID = keccak256(abi.encodePacked(name));
-    bytes32[] memory commandIDs = new bytes32[](1);
-    commandIDs[0] = custodianGroupUID;
 
-    string[] memory commandNames = new string[](1);
-    commandNames[0] = "registerCustodianGroup";
+    (bytes32[] memory ids, string[] memory names, bytes[] memory cmds) = Utils.prepareCommands(
+      custodianGroupUID,
+      "registerCustodianGroup",
+      abi.encode(custodianGroupUID)
+    );
 
-    bytes[] memory commands = new bytes[](1);
-    commands[0] = Utils.getRegisterCustodianGroupCommand(custodianGroupUID);
-
-    bytes memory data = Utils.buildCommandBatch(commandIDs, commandNames, commands);
+    bytes memory data = Utils.buildCommandBatch(ids, names, cmds);
     bytes memory input = _getSingedWeightedExecuteInput(data);
     gateway.execute2(input);
 
@@ -74,46 +76,74 @@ contract ScalarGatewayTest is Test {
     assertEq(uint8(s.phase), uint8(ScalarGateway.Phase.Preparing));
   }
 
-  // Split the token deployment setup into a separate function
-  function _setupTokenDeployment(
-    string memory name
-  ) private pure returns (string memory symbol, uint8 decimals, uint256 cap, uint256 limit, bytes32 commandID) {
-    uint256 random = Utils.getRandomInt(type(uint256).max, 1000);
-    symbol = string(abi.encodePacked(name, random));
-    decimals = 18;
-    cap = 1000000 * 10 ** decimals;
-    limit = cap;
-    commandID = keccak256(abi.encodePacked(name, symbol, decimals, cap, limit));
+  struct TokenParams {
+    string name;
+    string symbol;
+    uint8 decimals;
+    uint256 cap;
+    uint256 limit;
+    bytes32 commandID;
   }
 
-  function testDeployToken2() public {
-    bytes32 custodianGroupUID = testRegisterCustodianGroup();
-    string memory name = "Test Token";
-    (string memory symbol, uint8 decimals, uint256 cap, uint256 limit, bytes32 commandID) = _setupTokenDeployment(name);
+  function testDeployToken2() public returns (string memory, address tokenAddress) {
+    bytes32 uid = testRegisterCustodianGroup();
+    TokenParams memory params = prepareTokenParams("sBTC");
 
-    bytes32[] memory commandIDs = new bytes32[](1);
-    commandIDs[0] = commandID;
-    string[] memory commandNames = new string[](1);
-    commandNames[0] = "deployToken2";
-    bytes[] memory commands = new bytes[](1);
-    commands[0] = abi.encode(name, symbol, decimals, cap, address(0), limit, custodianGroupUID);
+    vm.recordLogs();
+    executeTokenDeployment(params, uid);
+    Vm.Log[] memory logs = vm.getRecordedLogs();
 
-    bytes memory data = Utils.buildCommandBatch(commandIDs, commandNames, commands);
+    for (uint i = 0; i < logs.length; i++) {
+      bytes32 eventSignature = keccak256("TokenDeployed(string,address)");
+      if (logs[i].topics[0] == eventSignature) {
+        (, address _tokenAddress) = abi.decode(logs[i].data, (string, address));
+        tokenAddress = _tokenAddress;
+        break;
+      }
+    }
+
+    return (params.symbol, tokenAddress);
+  }
+
+  function prepareTokenParams(string memory name) private pure returns (TokenParams memory) {
+    TokenParams memory params;
+    params.name = name;
+    (params.symbol, params.decimals, params.cap, params.limit, params.commandID) = Utils.setupTokenDeployment(name);
+    return params;
+  }
+
+  function executeTokenDeployment(TokenParams memory params, bytes32 uid) private {
+    (bytes32[] memory ids, string[] memory names, bytes[] memory cmds) = Utils.prepareCommands(
+      params.commandID,
+      "deployToken2",
+      abi.encode(params.name, params.symbol, params.decimals, params.cap, address(0), params.limit, uid)
+    );
+
+    bytes memory data = Utils.buildCommandBatch(ids, names, cmds);
     gateway.execute2(_getSingedWeightedExecuteInput(data));
+  }
+
+  function testMintToken() public {
+    (string memory symbol, address addrr) = testDeployToken2();
+    uint256 amount = 1000;
+
+    bytes32 commandID = keccak256(abi.encodePacked(symbol, "mintToken"));
+    (bytes32[] memory ids, string[] memory names, bytes[] memory cmds) = Utils.prepareCommands(
+      commandID,
+      "mintToken",
+      abi.encode(symbol, owner, amount)
+    );
+
+    bytes memory data = Utils.buildCommandBatch(ids, names, cmds);
+    gateway.execute2(_getSingedWeightedExecuteInput(data));
+
+    uint256 balance = IERC20(addrr).balanceOf(owner);
+    assertEq(balance, amount);
   }
 
   function test_getSession() public {
     vm.expectRevert(ScalarGateway.NotInitializedSession.selector);
     gateway.getSession(keccak256("test"));
-  }
-
-  function testEncodePacked() public pure {
-    bytes1 data1 = 0x01;
-    bytes2 data2 = 0x0102;
-    bytes3 data3 = 0x010203;
-    string memory data4 = "0x04";
-    bytes memory data = abi.encodePacked(data1, data2, data3, data4);
-    console2.logBytes(data);
   }
 
   function _getWeightedSignaturesProof(bytes memory data) private view returns (bytes memory) {

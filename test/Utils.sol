@@ -66,7 +66,28 @@ library Utils {
     return abi.encode(block.chainid, commandIDs, commandNames, commands);
   }
 
-  function getRegisterCustodianGroupCommand(bytes32 custodianGroupUID) public pure returns (bytes memory command) {
-    return abi.encode(custodianGroupUID);
+  function setupTokenDeployment(
+    string memory name
+  ) public pure returns (string memory symbol, uint8 decimals, uint256 cap, uint256 limit, bytes32 commandID) {
+    uint256 random = Utils.getRandomInt(type(uint256).max, 1000);
+    symbol = string(abi.encodePacked(name, random));
+    decimals = 18;
+    cap = 1_000_000 * 10 ** decimals;
+    limit = cap;
+    commandID = keccak256(abi.encodePacked(name, symbol, decimals, cap, limit));
+  }
+
+  function prepareCommands(
+    bytes32 commandID,
+    string memory name,
+    bytes memory command
+  ) public pure returns (bytes32[] memory, string[] memory, bytes[] memory) {
+    bytes32[] memory commandIDs = new bytes32[](1);
+    commandIDs[0] = commandID;
+    string[] memory commandNames = new string[](1);
+    commandNames[0] = name;
+    bytes[] memory commands = new bytes[](1);
+    commands[0] = command;
+    return (commandIDs, commandNames, commands);
   }
 }

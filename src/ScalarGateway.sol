@@ -6,7 +6,6 @@ import { AxelarGateway } from "@axelar-network/axelar-cgp-solidity/contracts/Axe
 import { ECDSA } from "@axelar-network/axelar-cgp-solidity/contracts/ECDSA.sol";
 import { IAxelarAuth } from "@axelar-network/axelar-cgp-solidity/contracts/interfaces/IAxelarAuth.sol";
 import { ITokenDeployer } from "@axelar-network/axelar-cgp-solidity/contracts/interfaces/ITokenDeployer.sol";
-import { console2 } from "forge-std/src/console2.sol";
 
 contract ScalarGateway is AxelarGateway {
   enum Phase {
@@ -140,7 +139,6 @@ contract ScalarGateway is AxelarGateway {
     ) = abi.decode(params, (string, string, uint8, uint256, address, uint256, bytes32));
 
     if (custodianGroupId == bytes32(0)) revert InvalidCustodianGroupId();
-    else console2.logBytes32(custodianGroupId);
 
     _safeGetSession(custodianGroupId);
 

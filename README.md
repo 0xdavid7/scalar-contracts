@@ -36,10 +36,9 @@ bun install
 Create a `.env` file in the root directory with the following variables:
 
 ```sh
-PRIVATE_KEY=
-ANVIL_RPC_URL=
-SEPOLIA_RPC_URL=
+ALCHEMY_API_KEY=
 API_KEY_ETHERSCAN=
+PRIVATE_KEY=
 ```
 
 ## Testing

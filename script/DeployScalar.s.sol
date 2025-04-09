@@ -10,13 +10,13 @@ import { AxelarAuthWeighted } from "@axelar-network/axelar-cgp-solidity/contract
 import { ScalarGateway } from "../src/ScalarGateway.sol";
 
 contract Deploy is BaseScript {
-  function run() public broadcast returns (TokenDeployer, AxelarAuthWeighted, ScalarGateway) {
-    TokenDeployer tokenDeployer = new TokenDeployer();
-    bytes[] memory operators = new bytes[](0);
-    AxelarAuthWeighted authWeighted = new AxelarAuthWeighted(operators);
+    function run() public broadcast returns (TokenDeployer, AxelarAuthWeighted, ScalarGateway) {
+        TokenDeployer tokenDeployer = new TokenDeployer();
+        bytes[] memory operators = new bytes[](0);
+        AxelarAuthWeighted authWeighted = new AxelarAuthWeighted(operators);
 
-    ScalarGateway gateway = new ScalarGateway(address(authWeighted), address(tokenDeployer));
+        ScalarGateway gateway = new ScalarGateway(address(authWeighted), address(tokenDeployer));
 
-    return (tokenDeployer, authWeighted, gateway);
-  }
+        return (tokenDeployer, authWeighted, gateway);
+    }
 }
