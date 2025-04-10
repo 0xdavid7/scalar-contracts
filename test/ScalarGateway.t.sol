@@ -123,7 +123,7 @@ contract ScalarGatewayTest is Test {
     gateway.execute2(_getSingedWeightedExecuteInput(data));
   }
 
-  function testMintToken() public {
+  function testMintToken() public returns (string memory, address) {
     (string memory symbol, address addrr) = testDeployToken2();
     uint256 amount = 1000;
 
@@ -139,6 +139,25 @@ contract ScalarGatewayTest is Test {
 
     uint256 balance = IERC20(addrr).balanceOf(owner);
     assertEq(balance, amount);
+
+    return (symbol, addrr);
+  }
+
+  function testRedeemToken() public {
+    (string memory symbol, address addr) = testMintToken();
+
+    bytes32 commandID = keccak256(abi.encodePacked(symbol, "redeemToken"));
+    (bytes32[] memory ids, string[] memory names, bytes[] memory cmds) = Utils.prepareCommands(
+      commandID,
+      "redeemToken",
+      abi.encode("bitcoin", "bc12345678", new bytes(0), symbol, 1000)
+    );
+    bytes memory data = Utils.buildCommandBatch(ids, names, cmds);
+    vm.prank(owner);
+    bool success = IERC20(addr).approve(address(gateway), 1000);
+    assertEq(success, true);
+    vm.prank(owner);
+    gateway.execute2(_getSingedWeightedExecuteInput(data));
   }
 
   function test_getSession() public {
