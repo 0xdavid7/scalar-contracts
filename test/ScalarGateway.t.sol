@@ -58,9 +58,7 @@ contract ScalarGatewayTest is Test {
   }
 
   function testRegisterCustodianGroup() public returns (bytes32 custodianGroupUID) {
-    string memory name = "Test Custodian Group";
-    custodianGroupUID = keccak256(abi.encodePacked(name));
-
+    custodianGroupUID = _getCustodianGroupId();
     (bytes32[] memory ids, string[] memory names, bytes[] memory cmds) = Utils.prepareCommands(
       custodianGroupUID,
       "registerCustodianGroup",
@@ -145,12 +143,14 @@ contract ScalarGatewayTest is Test {
 
   function testRedeemToken() public {
     (string memory symbol, address addr) = testMintToken();
+    bytes32 custodianGroupId = _getCustodianGroupId();
+    uint64 seq = gateway.getSession(custodianGroupId).sequence;
 
     bytes32 commandID = keccak256(abi.encodePacked(symbol, "redeemToken"));
     (bytes32[] memory ids, string[] memory names, bytes[] memory cmds) = Utils.prepareCommands(
       commandID,
       "redeemToken",
-      abi.encode("bitcoin", "bc12345678", new bytes(0), symbol, 1000)
+      abi.encode("bitcoin", "bc12345678", new bytes(0), symbol, 1000, custodianGroupId, seq)
     );
     bytes memory data = Utils.buildCommandBatch(ids, names, cmds);
     vm.prank(owner);
@@ -184,5 +184,10 @@ contract ScalarGatewayTest is Test {
   function _getSingedWeightedExecuteInput(bytes memory data) private view returns (bytes memory) {
     bytes memory proof = _getWeightedSignaturesProof(data);
     return abi.encode(data, proof);
+  }
+
+  function _getCustodianGroupId() private pure returns (bytes32 custodianGroupUID) {
+    string memory name = "Test Custodian Group";
+    custodianGroupUID = keccak256(abi.encodePacked(name));
   }
 }

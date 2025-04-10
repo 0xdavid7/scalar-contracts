@@ -23,9 +23,20 @@ contract ScalarGateway is AxelarGateway {
   error PhaseNotChanged();
   error PhaseAlreadyExists();
   error InvalidCustodianGroupId();
+  error InvalidSession();
 
   event SwitchPhase(bytes32 indexed custodianGroupId, uint64 indexed sequence, Phase from, Phase to);
   event RegisterCustodianGroup(bytes32 indexed custodianGroupId, uint64 sequence, Phase phase);
+  event RedeemToken(
+    address indexed sender,
+    uint64 indexed sequence,
+    string destinationChain,
+    string destinationContractAddress,
+    bytes32 indexed payloadHash,
+    bytes payload,
+    string symbol,
+    uint256 amount
+  );
 
   bytes32 internal constant SELECTOR_SWITCH_PHASE = keccak256("switchPhase");
   bytes32 internal constant SELECTOR_REGISTER_CUSTODIAN_GROUP = keccak256("registerCustodianGroup");
@@ -186,15 +197,21 @@ contract ScalarGateway is AxelarGateway {
       string memory destinationContractAddress,
       bytes memory payload,
       string memory symbol,
-      uint256 amount
-    ) = abi.decode(params, (string, string, bytes, string, uint256));
+      uint256 amount,
+      bytes32 custodianGroupId,
+      uint64 sessionSequence
+    ) = abi.decode(params, (string, string, bytes, string, uint256, bytes32, uint64));
 
-    // TODO: validate the burned amount with the total of resevered utxos
+    // validate the session
+    Session memory session = _safeGetSession(custodianGroupId);
+    if (session.sequence != sessionSequence) revert InvalidSession();
+    if (session.phase != Phase.Preparing) revert InvalidPhase();
 
     _burnTokenFrom(account, symbol, amount);
 
-    emit ContractCallWithToken(
+    emit RedeemToken(
       account,
+      session.sequence,
       destinationChain,
       destinationContractAddress,
       keccak256(payload),
