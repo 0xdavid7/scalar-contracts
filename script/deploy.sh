@@ -42,20 +42,17 @@ check_env() {
 set_network_config() {
     case "$NETWORK" in
     "mainnet")
-        VERIFY=true
+        CHAIN_ID=1
         ;;
     "sepolia")
-        VERIFY=true
+        CHAIN_ID=11155111
         ;;
-    "bnb_testnet")
-        VERIFY=true
-        ;;
-    "anvil")
-        VERIFY=false
+    "bsctestnet")
+        CHAIN_ID=97
         ;;
     *)
         echo -e "${RED}Error: Unsupported network '$NETWORK'${NC}"
-        echo "Supported networks: mainnet, base, bnb, sepolia"
+        echo "Supported networks: mainnet, sepolia, bsctestnet, anvil"
         exit 1
         ;;
     esac
@@ -76,16 +73,19 @@ deploy() {
     echo -e "${GREEN}Deploying DeployScalar contract...${NC}"
     # Build Forge script command
     FORGE_CMD="forge script script/DeployScalar.s.sol \
-        --chain-id $NETWORK \
+        --chain-id $CHAIN_ID \
         --rpc-url $NETWORK \
         --private-key $PRIVATE_KEY \
-        --broadcast"
-
+        --broadcast \
+        --optimize \
+        --optimizer-runs 200 \
+        --verify"
+        
     # if network is fork, not verify
-    if [ "$VERIFY" = true ]; then
-        FORGE_CMD="$FORGE_CMD --etherscan-api-key $API_KEY_ETHERSCAN"
-        FORGE_CMD="$FORGE_CMD --verify $VERIFIER_URL"
-    fi
+    # if [ "$VERIFY" = true ]; then
+    #     FORGE_CMD="$FORGE_CMD --etherscan-api-key $API_KEY_ETHERSCAN"
+    #     FORGE_CMD="$FORGE_CMD --verify $VERIFIER_URL"
+    # fi
 
     # Execute the command
     echo "Executing: $FORGE_CMD"

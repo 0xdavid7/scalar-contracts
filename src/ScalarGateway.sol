@@ -30,6 +30,7 @@ contract ScalarGateway is AxelarGateway {
   event RedeemToken(
     address indexed sender,
     uint64 indexed sequence,
+    bytes32 custodianGroupUID,
     string destinationChain,
     string destinationContractAddress,
     bytes32 indexed payloadHash,
@@ -212,6 +213,7 @@ contract ScalarGateway is AxelarGateway {
     emit RedeemToken(
       account,
       session.sequence,
+      custodianGroupId,
       destinationChain,
       destinationContractAddress,
       keccak256(payload),
