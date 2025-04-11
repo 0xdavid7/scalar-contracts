@@ -76,9 +76,7 @@ deploy() {
         --chain-id $CHAIN_ID \
         --rpc-url $NETWORK \
         --private-key $PRIVATE_KEY \
-        --broadcast \
-        --optimize \
-        --optimizer-runs 200 \
+        --broadcast 
         --verify"
         
     # if network is fork, not verify
