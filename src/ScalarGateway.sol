@@ -18,7 +18,6 @@ import { ITokenDeployer } from "@axelar-network/axelar-cgp-solidity/contracts/in
 import { ECDSA } from "@axelar-network/axelar-cgp-solidity/contracts/ECDSA.sol";
 import { DepositHandler } from "@axelar-network/axelar-cgp-solidity/contracts/DepositHandler.sol";
 import { EternalStorage } from "@axelar-network/axelar-cgp-solidity/contracts/EternalStorage.sol";
-import { console2 } from "forge-std/src/console2.sol";
 
 contract ScalarGateway is IAxelarGateway, Implementation, EternalStorage {
   using SafeTokenCall for IERC20;
@@ -590,14 +589,11 @@ contract ScalarGateway is IAxelarGateway, Implementation, EternalStorage {
         continue;
       }
 
-      // Prevent a re-entrancy from executing this command before it can be marked as successful.
-      _setCommandExecuted(commandId, true);
-
       bool success;
       if (commandSelector == ScalarGateway.redeemToken.selector) {
-        (success, ) = address(this).call(abi.encodeWithSelector(commandSelector, params, msg.sender));
+        (success, ) = address(this).call(abi.encodeWithSelector(commandSelector, params[i], msg.sender));
       } else {
-        (success, ) = address(this).call(abi.encodeWithSelector(commandSelector, params, commandId));
+        (success, ) = address(this).call(abi.encodeWithSelector(commandSelector, params[i], commandId));
       }
 
       // slither-disable-next-line reentrancy-events
@@ -941,17 +937,11 @@ contract ScalarGateway is IAxelarGateway, Implementation, EternalStorage {
   }
 
   function registerCustodianGroup(bytes calldata params, bytes32) external onlySelf {
-    console2.log("registerCustodianGroup:");
-    console2.logBytes(params);
     bytes32 custodianGroupId = abi.decode(params, (bytes32));
-    console2.logBytes32(custodianGroupId);
-
     Session memory session = _getSession(custodianGroupId);
     if (session.sequence != 0) {
       revert PhaseAlreadyExists();
     }
-
-    console2.logBytes32(custodianGroupId);
 
     session.sequence = 1;
     session.phase = Phase.Preparing;
@@ -1081,7 +1071,6 @@ contract ScalarGateway is IAxelarGateway, Implementation, EternalStorage {
   }
 
   function _getSession(bytes32 _custodianGroupId) internal view returns (Session memory) {
-    console2.log("getSession");
     return sessions[_custodianGroupId];
   }
 
