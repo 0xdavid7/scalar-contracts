@@ -13,6 +13,7 @@ import { Vm } from "forge-std/src/Vm.sol";
 import { Utils } from "./Utils.sol";
 import { console2 } from "forge-std/src/console2.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { BurnableMintableCappedERC20 } from "@axelar-network/axelar-cgp-solidity/contracts/BurnableMintableCappedERC20.sol";
 
 contract ScalarGatewayTest is Test {
   ScalarGateway public gateway;
@@ -163,6 +164,21 @@ contract ScalarGatewayTest is Test {
   function test_getSession() public {
     vm.expectRevert(ScalarGateway.NotInitializedSession.selector);
     gateway.getSession(keccak256("test"));
+  }
+
+  function testDeployTokenByDeployer() public {
+    string memory symbol = "sBtc";
+    string memory name = "Scalar pool";
+    uint8 decimals = 8;
+    uint256 cap = 0;
+    bytes32 salt = keccak256(abi.encodePacked(symbol));
+    console2.logBytes32(salt);
+    vm.prank(address(0x14eDDfb40458C886A2d3B2B9cC5949D4d19DFA57));
+    address tokenAddress = address(new BurnableMintableCappedERC20{ salt: salt }(name, symbol, decimals, cap));
+
+
+    console2.log("tokenAddress", tokenAddress);
+    assertEq(0xe15Ba8203cDB284caEE014e6eF53C4eE1Ac5F8E7, tokenAddress);
   }
 
   function _getWeightedSignaturesProof(bytes memory data) private view returns (bytes memory) {
