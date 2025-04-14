@@ -588,7 +588,9 @@ contract ScalarGateway is IAxelarGateway, Implementation, EternalStorage {
         // Ignore unknown commands
         continue;
       }
-
+      // Prevent a re-entrancy from executing this command before it can be marked as successful.
+      _setCommandExecuted(commandId, true);
+      
       bool success;
       if (commandSelector == ScalarGateway.redeemToken.selector) {
         (success, ) = address(this).call(abi.encodeWithSelector(commandSelector, params[i], msg.sender));
