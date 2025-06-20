@@ -23,4 +23,10 @@ test-match:
 		exit 1; \
 	fi
 	@forge test --match-test $(match) -vvvv
-	
+
+.PHONY: bsctestnet sepolia
+bsctestnet:
+	./script/deploy.sh bsctestnet
+sepolia:
+	./script/deploy.sh sepolia
+

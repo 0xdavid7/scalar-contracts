@@ -216,6 +216,33 @@ contract ScalarGateway is IAxelarGateway, Implementation, EternalStorage {
     );
   }
 
+  function redeemTokenV2(
+    string calldata destinationChain,
+    string calldata destinationContractAddress,
+    bytes calldata payload,
+    string calldata symbol,
+    uint256 amount,
+    bytes32 custodianGroupId
+  ) external {
+    // validate the session
+    Session memory session = _safeGetSession(custodianGroupId);
+    if (session.phase != Phase.Preparing) revert InvalidPhase();
+
+    _burnTokenFrom(msg.sender, symbol, amount);
+
+    emit RedeemToken(
+      msg.sender,
+      session.sequence,
+      custodianGroupId,
+      destinationChain,
+      destinationContractAddress,
+      keccak256(payload),
+      payload,
+      symbol,
+      amount
+    );
+  }
+
   /**
    * @notice Checks whether a contract call has been approved by the gateway.
    * @param commandId The gateway command ID
@@ -590,7 +617,7 @@ contract ScalarGateway is IAxelarGateway, Implementation, EternalStorage {
       }
       // Prevent a re-entrancy from executing this command before it can be marked as successful.
       _setCommandExecuted(commandId, true);
-      
+
       bool success;
       if (commandSelector == ScalarGateway.redeemToken.selector) {
         (success, ) = address(this).call(abi.encodeWithSelector(commandSelector, params[i], msg.sender));
